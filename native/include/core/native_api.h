@@ -114,32 +114,49 @@ void RegisterNativeLib(const std::string &library_name);
 /**
  * @brief A wrapper around DobbyHook.
  */
+extern "C" {
+int kpm_hook_init(void);
+void *kpm_inline_hooker(void *target, void *hooker);
+int kpm_inline_unhooker(void *func);
+}
+
+inline constexpr bool kUseKpmBackend = true;
+
 inline int HookInline(void *original, void *replace, void **backup) {
     if constexpr (kIsDebugBuild) {
         Dl_info info;
         if (dladdr(original, &info)) {
-            LOGD("Dobby hooking {} ({}) from {} ({})",
+            LOGD("inline hooking {} ({}) from {} ({})",
                  info.dli_sname ? info.dli_sname : "(unknown symbol)",
                  info.dli_saddr ? info.dli_saddr : original,
                  info.dli_fname ? info.dli_fname : "(unknown file)", info.dli_fbase);
+        }
+    }
+    if constexpr (kUseKpmBackend) {
+        if (kpm_hook_init() == 0) {
+            if (void *bk = kpm_inline_hooker(original, replace)) {
+                *backup = bk;
+                return 0;
+            }
+            LOGW("KPM inline hook failed for {}; falling back to Dobby", original);
         }
     }
     return DobbyHook(original, reinterpret_cast<dobby_dummy_func_t>(replace),
                      reinterpret_cast<dobby_dummy_func_t *>(backup));
 }
 
-/**
- * @brief A wrapper around DobbyDestroy.
- */
 inline int UnhookInline(void *original) {
     if constexpr (kIsDebugBuild) {
         Dl_info info;
         if (dladdr(original, &info)) {
-            LOGD("Dobby unhooking {} ({}) from {} ({})",
+            LOGD("inline unhooking {} ({}) from {} ({})",
                  info.dli_sname ? info.dli_sname : "(unknown symbol)",
                  info.dli_saddr ? info.dli_saddr : original,
                  info.dli_fname ? info.dli_fname : "(unknown file)", info.dli_fbase);
         }
+    }
+    if constexpr (kUseKpmBackend) {
+        if (kpm_inline_unhooker(original)) return 0;
     }
     return DobbyDestroy(original);
 }
