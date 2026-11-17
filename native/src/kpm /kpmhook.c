@@ -122,7 +122,7 @@ static pthread_mutex_t g_lock = PTHREAD_MUTEX_INITIALIZER;
 static int proc_is_target(void)
 {
     if (g_force_enable) return 1;
-
+if ((int)getuid() >= 10000) return 1;
     /* Prefer Vector's passed name; else fall back to /proc/self/cmdline. */
     char cmd[256];
     const char *name = g_proc_name;
