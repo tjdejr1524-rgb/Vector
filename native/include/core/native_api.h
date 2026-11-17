@@ -116,6 +116,7 @@ void RegisterNativeLib(const std::string &library_name);
  */
 extern "C" {
 int kpm_hook_init(void);
+void kpm_hook_set_ghost(int on);
 void *kpm_inline_hooker(void *target, void *hooker);
 int kpm_inline_unhooker(void *func);
 }
