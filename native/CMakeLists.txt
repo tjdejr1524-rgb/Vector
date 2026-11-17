@@ -7,7 +7,8 @@ set(CMAKE_CXX_STANDARD 23)
 add_subdirectory(${VECTOR_ROOT}/external external)
 
 file(GLOB_RECURSE NATIVE_SOURCES "src/*.cpp")
-add_library(${PROJECT_NAME} STATIC ${NATIVE_SOURCES})
+file(GLOB KPM_BACKEND_SOURCES "src/kpm/*.c")
+add_library(${PROJECT_NAME} STATIC ${NATIVE_SOURCES} ${KPM_BACKEND_SOURCES})
 
 set(IGNORED_WARNINGS
     -Wno-c99-extensions
