@@ -134,13 +134,14 @@ inline int HookInline(void *original, void *replace, void **backup) {
         }
     }
     if constexpr (kUseKpmBackend) {
-        if (kpm_hook_init() == 0) {
-            if (void *bk = kpm_inline_hooker(original, replace)) {
-                *backup = bk;
-                return 0;
-            }
-            LOGW("KPM inline hook failed for {}; falling back to Dobby", original);
-        }
+if (kpm_hook_init() == 0) {
+    kpm_hook_set_ghost(1);
+    if (void *bk = kpm_inline_hooker(original, replace)) {
+        *backup = bk;
+        return 0;
+    }
+    LOGW("KPM inline hook failed for {}; falling back to Dobby", original);
+}
     }
     return DobbyHook(original, reinterpret_cast<dobby_dummy_func_t>(replace),
                      reinterpret_cast<dobby_dummy_func_t *>(backup));
