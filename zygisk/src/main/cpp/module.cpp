@@ -13,7 +13,8 @@
 #include "ipc_bridge.h"
 #include <stdio.h>
 #include <string.h>
-
+#ifndef MFD_CLOEXEC
+#define MFD_CLOEXEC 0x0001U
 #ifndef PR_SET_VMA
 #define PR_SET_VMA 0x53564d41
 #define PR_SET_VMA_ANON_NAME 0
@@ -54,7 +55,7 @@ static int hide_anon_exec_once() {
     fclose(f);
     for (int i = 0; i < n; i++) {
         unsigned long a = ranges[i][0];
-        size_t len = ranges[i][1] - a;
+        unsigned long len = ranges[i][1] - a;
         if (prctl(PR_SET_VMA, PR_SET_VMA_ANON_NAME, a, len,
                   "dalvik-jit-code-cache") == 0)
             continue;
@@ -64,14 +65,20 @@ static int hide_anon_exec_once() {
             mprotect((void *)a, len, PROT_READ | PROT_EXEC);
             continue;
         }
-        int fd = memfd_create("jit-cache", MFD_CLOEXEC);
+        int fd = (int)syscall(
+#if defined(__aarch64__)
+                279
+#else
+                385
+#endif
+                , "jit-cache", MFD_CLOEXEC);
         if (fd >= 0 && ftruncate(fd, (off_t)len) == 0) {
-            size_t off = 0;
+            unsigned long off = 0;
             int ok = 1;
             while (off < len) {
-                ssize_t w = write(fd, (char *)a + off, len - off);
+                long w = write(fd, (char *)a + off, len - off);
                 if (w <= 0) { ok = 0; break; }
-                off += (size_t)w;
+                off += (unsigned long)w;
             }
             if (ok)
                 mmap((void *)a, len, PROT_READ | PROT_EXEC,
