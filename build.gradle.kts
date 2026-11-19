@@ -306,6 +306,8 @@ val args =
         "-DCMAKE_SHARED_LINKER_FLAGS=-Wl,-z,max-page-size=16384",
         "-DCMAKE_EXE_LINKER_FLAGS=-Wl,-z,max-page-size=16384",
         "-DCMAKE_CXX_SCAN_FOR_MODULES=OFF",
+"-DCMAKE_CXX_MODULE_STD=OFF",
+"-DCMAKE_PROJECT_INCLUDE=${rootDir.absolutePath}/cmake/no_cxx_std_module.cmake",
     )
 
                 externalNativeBuild {
