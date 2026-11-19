@@ -9,10 +9,15 @@
 #include <unistd.h>
 #include <pthread.h>
 #include <zygisk.hpp>
-
+#include <sys/prctl.h>
 #include "ipc_bridge.h"
 #include <stdio.h>
 #include <string.h>
+
+#ifndef PR_SET_VMA
+#define PR_SET_VMA 0x53564d41
+#define PR_SET_VMA_ANON_NAME 0
+#endif
 
 extern "C" int kpm_hide_region(void *addr);
 namespace vector::native::module {
@@ -48,7 +53,9 @@ static int hide_anon_exec_once() {
     }
 fclose(f);
     for (int i = 0; i < n; i++)
-        kpm_hide_region((void *)ranges[i][0]);
+prctl(PR_SET_VMA, PR_SET_VMA_ANON_NAME,
+      ranges[i][0], ranges[i][1] - ranges[i][0],
+      "dalvik-jit-code-cache");
     return n;
 }
 
