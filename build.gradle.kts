@@ -265,8 +265,8 @@ subprojects {
 
             buildFeatures.buildConfig = true
             externalNativeBuild.cmake {
-                version = "3.29.8+"
-                buildStagingDirectory = layout.buildDirectory.get().asFile
+version = "3.31.8"
+buildStagingDirectory = layout.buildDirectory.get().asFile
             }
 
             defaultConfig.apply {
