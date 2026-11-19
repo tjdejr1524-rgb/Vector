@@ -117,9 +117,14 @@ jobs:
       - name: Setup Android SDK
         uses: android-actions/setup-android@v4
 
-      - name: Remove Android's cmake
+      - name: Install CMake 3.31.8
         shell: bash
-        run: rm -rf $ANDROID_HOME/cmake
+        run: |
+          rm -rf "$ANDROID_HOME/cmake"
+          curl -fsSL -o /tmp/cmake.sh https://github.com/Kitware/CMake/releases/download/v3.31.8/cmake-3.31.8-linux-x86_64.sh
+          sudo bash /tmp/cmake.sh --skip-license --prefix=/usr/local
+          sudo ln -sf /usr/local/bin/cmake /usr/bin/cmake
+          cmake --version
 
       - name: Build with Gradle
         run: |
