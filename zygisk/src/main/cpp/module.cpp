@@ -51,16 +51,42 @@ static int hide_anon_exec_once() {
         ranges[n][1] = b;
         n++;
     }
-fclose(f);
-    for (int i = 0; i < n; i++)
-prctl(PR_SET_VMA, PR_SET_VMA_ANON_NAME,
-      ranges[i][0], ranges[i][1] - ranges[i][0],
-      "dalvik-jit-code-cache");
+    fclose(f);
+    for (int i = 0; i < n; i++) {
+        unsigned long a = ranges[i][0];
+        size_t len = ranges[i][1] - a;
+        if (prctl(PR_SET_VMA, PR_SET_VMA_ANON_NAME, a, len,
+                  "dalvik-jit-code-cache") == 0)
+            continue;
+        mprotect((void *)a, len, PROT_READ | PROT_WRITE);
+        if (prctl(PR_SET_VMA, PR_SET_VMA_ANON_NAME, a, len,
+                  "dalvik-jit-code-cache") == 0) {
+            mprotect((void *)a, len, PROT_READ | PROT_EXEC);
+            continue;
+        }
+        int fd = memfd_create("jit-cache", MFD_CLOEXEC);
+        if (fd >= 0 && ftruncate(fd, (off_t)len) == 0) {
+            size_t off = 0;
+            int ok = 1;
+            while (off < len) {
+                ssize_t w = write(fd, (char *)a + off, len - off);
+                if (w <= 0) { ok = 0; break; }
+                off += (size_t)w;
+            }
+            if (ok)
+                mmap((void *)a, len, PROT_READ | PROT_EXEC,
+                     MAP_PRIVATE | MAP_FIXED, fd, 0);
+            close(fd);
+        } else {
+            if (fd >= 0) close(fd);
+            mprotect((void *)a, len, PROT_READ | PROT_EXEC);
+        }
+    }
     return n;
 }
 
 static void *hide_anon_thread(void *) {
-    for (int i = 0; i < 10; i++) {
+    for (int i = 0; i < 50; i++) {
         usleep(100 * 1000);
         hide_anon_exec_once();
     }
