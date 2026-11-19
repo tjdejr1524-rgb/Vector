@@ -416,7 +416,9 @@ void VectorModule::postAppSpecialize(const zygisk::AppSpecializeArgs *args) {
     bool entered = this->FindAndCall(
         env_, "forkCommon", "(ZZLjava/lang/String;Ljava/lang/String;Landroid/os/IBinder;)V",
         JNI_FALSE, JNI_FALSE, args->nice_name, args->app_data_dir, binder.get(), is_manager_app_);
-
+if (entered) {
+    LOGV("Injected Vector framework into '{}'.", nice_name_str.get());
+}
  else {
         LOGE("Framework entry failed in '{}'; this process runs without Xposed.",
              nice_name_str.get());
