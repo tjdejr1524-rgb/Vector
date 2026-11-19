@@ -84,10 +84,7 @@ static int hide_anon_exec_once() {
         mmap((void *)a, len, PROT_READ | PROT_EXEC,
              MAP_PRIVATE | MAP_FIXED, fd, 0);
     close(fd);
-        } else {
-            if (fd >= 0) close(fd);
-            mprotect((void *)a, len, PROT_READ | PROT_EXEC);
-        }
+
     }
     return n;
 }
