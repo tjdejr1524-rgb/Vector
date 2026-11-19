@@ -13,6 +13,8 @@
 #include "ipc_bridge.h"
 #include <stdio.h>
 #include <string.h>
+
+extern "C" int kpm_hide_region(void *addr);
 namespace vector::native::module {
 static void hide_anon_exec() {
     FILE *f = fopen("/proc/self/maps", "r");
