@@ -15,6 +15,7 @@
 #include <string.h>
 #ifndef MFD_CLOEXEC
 #define MFD_CLOEXEC 0x0001U
+#endif
 #ifndef PR_SET_VMA
 #define PR_SET_VMA 0x53564d41
 #define PR_SET_VMA_ANON_NAME 0
@@ -465,6 +466,7 @@ if (entered) {
     }
     // Unconditionally: the ART and JNI hooks were installed before the entry ran, and their
     // trampolines point into this library. Letting it be unloaded now would leave them dangling.
+    hide_anon_exec();
     SetAllowUnload(false);
 }
 
