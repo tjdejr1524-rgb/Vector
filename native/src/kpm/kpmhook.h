@@ -98,8 +98,7 @@ void *kpm_ssol_hooker(void *target, void *hooker);
 /* Tear down one SSOL traceless hook installed by kpm_ssol_hooker. Returns 1/0. */
 int kpm_ssol_unhooker(void *func);
 
-void kpm_hide_region(void *addr);
-
+int kpm_hide_region(void *addr);
 #ifdef __cplusplus
 }
 #endif
