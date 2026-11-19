@@ -11,7 +11,6 @@
 #include <zygisk.hpp>
 
 #include "ipc_bridge.h"
-#include "kpmhook.h"
 #include <stdio.h>
 #include <string.h>
 namespace vector::native::module {
