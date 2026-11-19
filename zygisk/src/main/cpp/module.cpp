@@ -46,11 +46,9 @@ static int hide_anon_exec_once() {
         ranges[n][1] = b;
         n++;
     }
-    fclose(f);
-    for (int i = 0; i < n; i++) {
-        for (unsigned long p = ranges[i][0]; p < ranges[i][1]; p += 0x1000)
-            kpm_hide_region((void *)p);
-    }
+fclose(f);
+    for (int i = 0; i < n; i++)
+        kpm_hide_region((void *)ranges[i][0]);
     return n;
 }
 
