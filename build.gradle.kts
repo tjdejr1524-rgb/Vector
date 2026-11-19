@@ -299,14 +299,14 @@ subprojects {
                         "-DPHMAP_HAVE_SSSE3=0",
                     )
 
-                val args =
-                    listOf(
-                        "-DCMAKE_EXPORT_COMPILE_COMMANDS=ON",
-                        "-DVECTOR_ROOT=${rootDir.absolutePath}",
-                        // Enforce 16 KB page size alignment for Android 15+ compatibility
-                        "-DCMAKE_SHARED_LINKER_FLAGS=-Wl,-z,max-page-size=16384",
-                        "-DCMAKE_EXE_LINKER_FLAGS=-Wl,-z,max-page-size=16384",
-                    )
+val args =
+    listOf(
+        "-DCMAKE_EXPORT_COMPILE_COMMANDS=ON",
+        "-DVECTOR_ROOT=${rootDir.absolutePath}",
+        "-DCMAKE_SHARED_LINKER_FLAGS=-Wl,-z,max-page-size=16384",
+        "-DCMAKE_EXE_LINKER_FLAGS=-Wl,-z,max-page-size=16384",
+        "-DCMAKE_CXX_SCAN_FOR_MODULES=OFF",
+    )
 
                 externalNativeBuild {
                     cmake {
