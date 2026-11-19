@@ -737,19 +737,7 @@ out:
 /* Register an anomalous region (page containing `addr`) with the KPM's mm-gated maps-hide,
  * so an in-process /proc/self/{maps,smaps} scan never sees it -- chiefly the LSPlant trampoline
  * pool (rwxp anon) that every hook creates. Only works in the gated process (bridge armed). */
-int kpm_hide_region(void *addr)
-{
-    int ok = 0;
-    pthread_mutex_lock(&g_lock);
-    if (ensure_init_locked() != 0) goto out;
-    char cmd[96], out[160];
-    snprintf(cmd, sizeof cmd, "hidergn %d 0x%lx", g_pid, (unsigned long)(uintptr_t)addr);
-    bridge_cmd(cmd, out, sizeof out);
-    ok = reply_ok(out);
-out:
-    pthread_mutex_unlock(&g_lock);
-    return ok;
-}
+
 
 void kpm_hook_shutdown(void)
 {
@@ -775,4 +763,17 @@ void kpm_hook_shutdown(void)
         memset(e, 0, sizeof(*e));
     }
     pthread_mutex_unlock(&g_lock);
+}
+int kpm_hide_region(void *addr)
+{
+    int ok = 0;
+    pthread_mutex_lock(&g_lock);
+    if (ensure_init_locked() != 0) goto out;
+    char cmd[96], reply[160];
+    snprintf(cmd, sizeof cmd, "hidergn %d 0x%lx", g_pid, (unsigned long)(uintptr_t)addr);
+    bridge_cmd(cmd, reply, sizeof reply);
+    ok = reply_ok(reply);
+out:
+    pthread_mutex_unlock(&g_lock);
+    return ok;
 }
