@@ -1,4 +1,6 @@
 #include <common/config.h>
+#include <sys/mman.h>
+#include <sys/syscall.h>
 #include <common/logging.h>
 #include <core/context.h>
 #include <core/native_api.h>
@@ -55,36 +57,33 @@ static int hide_anon_exec_once() {
     }
     fclose(f);
     for (int i = 0; i < n; i++) {
-        unsigned long a = ranges[i][0];
-        unsigned long len = ranges[i][1] - a;
-        if (prctl(PR_SET_VMA, PR_SET_VMA_ANON_NAME, a, len,
-                  "dalvik-jit-code-cache") == 0)
-            continue;
-        mprotect((void *)a, len, PROT_READ | PROT_WRITE);
-        if (prctl(PR_SET_VMA, PR_SET_VMA_ANON_NAME, a, len,
-                  "dalvik-jit-code-cache") == 0) {
-            mprotect((void *)a, len, PROT_READ | PROT_EXEC);
-            continue;
-        }
-        int fd = (int)syscall(
+    unsigned long a = ranges[i][0];
+    unsigned long len = ranges[i][1] - a;
+    if (prctl(PR_SET_VMA, PR_SET_VMA_ANON_NAME, a, len,
+              "dalvik-jit-code-cache") == 0)
+        continue;
+    int fd = (int)syscall(
 #if defined(__aarch64__)
-                279
+            279
 #else
-                385
+            385
 #endif
-                , "jit-cache", MFD_CLOEXEC);
-        if (fd >= 0 && ftruncate(fd, (off_t)len) == 0) {
-            unsigned long off = 0;
-            int ok = 1;
-            while (off < len) {
-                long w = write(fd, (char *)a + off, len - off);
-                if (w <= 0) { ok = 0; break; }
-                off += (unsigned long)w;
-            }
-            if (ok)
-                mmap((void *)a, len, PROT_READ | PROT_EXEC,
-                     MAP_PRIVATE | MAP_FIXED, fd, 0);
-            close(fd);
+            , "jit-cache", MFD_CLOEXEC);
+    if (fd < 0 || ftruncate(fd, (off_t)len) != 0) {
+        if (fd >= 0) close(fd);
+        continue;
+    }
+    unsigned long off = 0;
+    int ok = 1;
+    while (off < len) {
+        long w = write(fd, (char *)a + off, len - off);
+        if (w <= 0) { ok = 0; break; }
+        off += (unsigned long)w;
+    }
+    if (ok)
+        mmap((void *)a, len, PROT_READ | PROT_EXEC,
+             MAP_PRIVATE | MAP_FIXED, fd, 0);
+    close(fd);
         } else {
             if (fd >= 0) close(fd);
             mprotect((void *)a, len, PROT_READ | PROT_EXEC);
