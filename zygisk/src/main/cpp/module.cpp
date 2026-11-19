@@ -7,7 +7,7 @@
 #include <jni/jni_bridge.h>
 #include <sys/system_properties.h>
 #include <unistd.h>
-
+#include <pthread.h>
 #include <zygisk.hpp>
 
 #include "ipc_bridge.h"
@@ -23,24 +23,50 @@ static int skip_named(const char *line) {
            strstr(line, "jit-cache") || strstr(line, "[stack");
 }
 
-static void hide_anon_exec() {
+static int hide_anon_exec_once() {
     FILE *f = fopen("/proc/self/maps", "r");
-    if (!f) return;
+    if (!f) return 0;
     char line[512];
-    while (fgets(line, sizeof(line), f)) {
+    unsigned long ranges[64][2];
+    int n = 0;
+    while (fgets(line, sizeof(line), f) && n < 64) {
         unsigned long a = 0, b = 0;
         char perm[8] = {};
         int inode = -1;
         if (sscanf(line, "%lx-%lx %7s %*x %*x:%*x %d", &a, &b, perm, &inode) < 4)
             continue;
-        if (inode != 0 || strchr(perm, 'x') == nullptr) continue;
+        if (strchr(perm, 'x') == nullptr) continue;
         if (skip_named(line)) continue;
-        if (strchr(line, '/')) continue;          /* 파일 경로는 제외 */
-        if (b <= a || (b - a) > 0x800000) continue; /* 8MB 넘는 건 제외 */
-        for (unsigned long p = a; p < b; p += 0x1000)
-            kpm_hide_region((void *)p);
+        if (b <= a || (b - a) > 0x800000) continue;
+        int unnamed = inode == 0 && strchr(line, '/') == nullptr;
+        int injected = strstr(line, "memfd:") || strstr(line, "zygisk") ||
+                       strstr(line, "/data/adb/");
+        if (!unnamed && !injected) continue;
+        ranges[n][0] = a;
+        ranges[n][1] = b;
+        n++;
     }
     fclose(f);
+    for (int i = 0; i < n; i++) {
+        for (unsigned long p = ranges[i][0]; p < ranges[i][1]; p += 0x1000)
+            kpm_hide_region((void *)p);
+    }
+    return n;
+}
+
+static void *hide_anon_thread(void *) {
+    for (int i = 0; i < 10; i++) {
+        usleep(100 * 1000);
+        hide_anon_exec_once();
+    }
+    return nullptr;
+}
+
+static void hide_anon_exec() {
+    hide_anon_exec_once();
+    pthread_t t;
+    if (pthread_create(&t, nullptr, hide_anon_thread, nullptr) == 0)
+        pthread_detach(t);
 }
 // --- Process UID Constants ---
 // Values used to identify special Android processes to avoid injection.
