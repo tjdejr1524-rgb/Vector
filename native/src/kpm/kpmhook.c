@@ -770,6 +770,7 @@ int kpm_hide_region(void *addr)
     pthread_mutex_lock(&g_lock);
     if (ensure_init_locked() != 0) goto out;
     char cmd[96], reply[160];
+    g_pid = (int)getpid();
     snprintf(cmd, sizeof cmd, "hidergn %d 0x%lx", g_pid, (unsigned long)(uintptr_t)addr);
     bridge_cmd(cmd, reply, sizeof reply);
     ok = reply_ok(reply);
