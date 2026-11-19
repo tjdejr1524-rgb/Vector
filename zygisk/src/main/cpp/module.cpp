@@ -11,9 +11,27 @@
 #include <zygisk.hpp>
 
 #include "ipc_bridge.h"
-
+#include "kpmhook.h"
+#include <stdio.h>
+#include <string.h>
 namespace vector::native::module {
-
+static void hide_anon_exec() {
+    FILE *f = fopen("/proc/self/maps", "r");
+    if (!f) return;
+    char line[512];
+    while (fgets(line, sizeof(line), f)) {
+        unsigned long a, b;
+        char perm[8] = {};
+        int inode = -1;
+        if (sscanf(line, "%lx-%lx %7s %*x %*x:%*x %d", &a, &b, perm, &inode) < 4)
+            continue;
+        if (inode != 0 || !strchr(perm, 'x')) continue;
+        if (strstr(line, "[vdso]") || strstr(line, "[anon:.bss]")) continue;
+        if (b - a != 0x1000) continue;
+        kpm_hide_region((void *)a);
+    }
+    fclose(f);
+}
 // --- Process UID Constants ---
 // Values used to identify special Android processes to avoid injection.
 // https://android.googlesource.com/platform/system/core/+/master/libcutils/include/private/android_filesystem_config.h
@@ -367,6 +385,7 @@ void VectorModule::postAppSpecialize(const zygisk::AppSpecializeArgs *args) {
 
     if (entered) {
         LOGV("Injected Vector framework into '{}'.", nice_name_str.get());
+        hide_anon_exec();
     } else {
         LOGE("Framework entry failed in '{}'; this process runs without Xposed.",
              nice_name_str.get());
