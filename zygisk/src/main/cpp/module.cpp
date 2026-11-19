@@ -16,20 +16,29 @@
 
 extern "C" int kpm_hide_region(void *addr);
 namespace vector::native::module {
+
+static int skip_named(const char *line) {
+    return strstr(line, "[vdso]") || strstr(line, "[vsyscall]") ||
+           strstr(line, "[anon:.bss]") || strstr(line, "[anon:dalvik") ||
+           strstr(line, "jit-cache") || strstr(line, "[stack");
+}
+
 static void hide_anon_exec() {
     FILE *f = fopen("/proc/self/maps", "r");
     if (!f) return;
     char line[512];
     while (fgets(line, sizeof(line), f)) {
-        unsigned long a, b;
+        unsigned long a = 0, b = 0;
         char perm[8] = {};
         int inode = -1;
         if (sscanf(line, "%lx-%lx %7s %*x %*x:%*x %d", &a, &b, perm, &inode) < 4)
             continue;
-        if (inode != 0 || !strchr(perm, 'x')) continue;
-        if (strstr(line, "[vdso]") || strstr(line, "[anon:.bss]")) continue;
-        if (b - a != 0x1000) continue;
-        kpm_hide_region((void *)a);
+        if (inode != 0 || strchr(perm, 'x') == nullptr) continue;
+        if (skip_named(line)) continue;
+        if (strchr(line, '/')) continue;          /* 파일 경로는 제외 */
+        if (b <= a || (b - a) > 0x800000) continue; /* 8MB 넘는 건 제외 */
+        for (unsigned long p = a; p < b; p += 0x1000)
+            kpm_hide_region((void *)p);
     }
     fclose(f);
 }
